@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "xbo-front.labels" . | nindent 4 }}
+spec:
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit}}
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0%
+  selector:
+    matchLabels:
+      {{- include "xbo-front.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.appName }}
+        {{- include "xbo-front.selectorLabels" . | nindent 8 }}
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+{{/*      initContainers:*/}}
+{{/*        - name: init-create-env*/}}
+{{/*          image: busybox*/}}
+{{/*          command:*/}}
+{{/*            - sh*/}}
+{{/*            - -c*/}}
+{{/*            - |*/}}
+{{/*              touch /app/.env.production && \*/}}
+{{/*              for key in $(ls /mnt/secrets); do echo "$key=$(cat /mnt/secrets/$key)" >> /app/.env.production; done*/}}
+{{/*          volumeMounts:*/}}
+{{/*            - name: env-volume*/}}
+{{/*              mountPath: /mnt/secrets*/}}
+{{/*            - name: app-volume*/}}
+{{/*              mountPath: /app*/}}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+{{/*          envFrom:*/}}
+{{/*            - secretRef:*/}}
+{{/*                name: {{ .Values.externalSecret.secretName }}*/}}
+{{/*          volumeMounts:*/}}
+{{/*            - name: app-volume*/}}
+{{/*              mountPath: /app/.env.production*/}}
+{{/*              subPath: .env.production*/}}
+{{/*          command:*/}}
+{{/*            - sh*/}}
+{{/*            - -c*/}}
+{{/*            - |*/}}
+{{/*              chmod +w ./public*/}}
+{{/*              node ./public/envGen.js production && node server.js*/}}
+          lifecycle:
+            {{- toYaml .Values.lifecycle | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+{{/*      volumes:*/}}
+{{/*        - name: env-volume*/}}
+{{/*          secret:*/}}
+{{/*            secretName: {{ .Values.externalSecret.secretName }}*/}}
+{{/*        - name: app-volume*/}}
+{{/*          emptyDir: { }*/}}

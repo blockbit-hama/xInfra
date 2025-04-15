@@ -1,0 +1,6 @@
+x1:
+  greeting: this is production
+spring:
+  config:
+    import: configtree:/workspace/secrets/*/
+

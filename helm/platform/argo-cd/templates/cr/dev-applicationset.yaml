@@ -1,0 +1,58 @@
+{{- if eq .Values.mode "dev" }}
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: x1
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - app: alt-shift-front
+            namespace: x1
+            path: application/alt-shift-front
+          - app: xauth
+            namespace: x1
+            path: application/xauth
+          - app: xfds
+            namespace: x1
+            path: application/xfds
+          - app: xboa
+            namespace: x1
+            path: application/xboa
+          - app: xbo-front
+            namespace: x1
+            path: application/xbo-front
+          - app: xbank
+            namespace: x1
+            path: application/xbank
+          - app: bitgo-express
+            namespace: x1
+            path: application/bitgo
+  template:
+    metadata:
+      name: '{{ printf "{{app}}" }}'
+      namespace: argocd
+      annotations:
+        {{- range $key, $value := .Values.applicationSet.annotations }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+    spec:
+      project: {{ .Values.applicationSet.project }}
+      source:
+        repoURL: {{ .Values.applicationSet.repoURL }}
+        targetRevision: {{ .Values.applicationSet.targetRevision }}
+        path: '{{ printf "{{path}}" }}'
+        helm:
+          valueFiles:
+            {{- range .Values.applicationSet.valueFiles }}
+            - {{ . | quote }}
+            {{- end }}
+      destination:
+        server: {{ .Values.applicationSet.cluster }}
+        namespace: '{{ printf "{{namespace}}" }}'
+      syncPolicy:
+        automated:
+          prune: {{ .Values.applicationSet.syncPolicy.prune }}
+          selfHeal: {{ .Values.applicationSet.syncPolicy.selfHeal }}
+{{- end }}

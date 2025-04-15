@@ -1,0 +1,46 @@
+appName: bitgo-express
+
+namespace: x1
+
+replicaCount: 1
+
+revisionHistoryLimit: 5
+
+image:
+  repository: bitgo/express
+  tag: 10.2.3
+  pullPolicy: IfNotPresent
+
+terminationGracePeriodSeconds: 15
+
+service:
+  name: bitgo
+  type: ClusterIP
+  port: 3080
+  targetPort: 3080
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+resources:
+  limits:
+    memory: 500Mi
+  requests:
+    memory: 500Mi
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 300
+      podsValue: 1
+      periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      podsValue: 1
+      periodSeconds: 15

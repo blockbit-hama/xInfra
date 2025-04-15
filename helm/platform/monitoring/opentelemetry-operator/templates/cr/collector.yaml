@@ -1,0 +1,28 @@
+{{/*apiVersion: opentelemetry.io/v1beta1*/}}
+{{/*kind: OpenTelemetryCollector*/}}
+{{/*metadata:*/}}
+{{/*  name: opentelemetry*/}}
+{{/*  namespace: {{ .Release.Namespace }}*/}}
+{{/*  annotations:*/}}
+{{/*    "helm.sh/hook": post-upgrade*/}}
+{{/*  labels:*/}}
+{{/*    {{- include "opentelemetry-operator.labels" . | nindent 4 }}*/}}
+{{/*spec:*/}}
+{{/*  config:*/}}
+{{/*    receivers:*/}}
+{{/*      otlp:*/}}
+{{/*        protocols:*/}}
+{{/*          grpc:*/}}
+{{/*          http:*/}}
+{{/*    exporters:*/}}
+{{/*      otlp/tempo:*/}}
+{{/*        endpoint: tempo-distributor:4317*/}}
+{{/*        tls:*/}}
+{{/*          insecure: true*/}}
+{{/*          insecure_skip_verify: true*/}}
+{{/*    service:*/}}
+{{/*      pipelines:*/}}
+{{/*        traces:*/}}
+{{/*          receivers: [otlp]*/}}
+{{/*          processors: []*/}}
+{{/*          exporters: [otlp/tempo]*/}}

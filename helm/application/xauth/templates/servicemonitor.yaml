@@ -1,0 +1,22 @@
+{{- if.Values.serviceMonitor.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Values.appName }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "xauth.labels" . | nindent 4 }}
+    release: prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+    - "x1"
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}
+  endpoints:
+  - port: http
+    path: {{.Values.serviceMonitor.metricPath }}
+    scheme: http
+    interval: {{ .Values.serviceMonitor.interval }}
+{{- end -}}

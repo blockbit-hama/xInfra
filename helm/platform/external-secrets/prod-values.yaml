@@ -1,0 +1,19 @@
+webhook:
+  port: 9443
+
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::209479278227:role/eks-prod-custella-external-secrets
+
+clusterSecretStore:
+  name: secret-store
+  region: ap-northeast-2
+  auth:
+    serviceAccountRef:
+      name: external-secrets
+
+serviceMonitor:
+  enabled: false
+  additionalLabels:
+    release: prometheus-stack

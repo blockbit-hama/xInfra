@@ -1,0 +1,53 @@
+nginx:
+  enabled: true
+minio:
+  enabled: false
+ingress:
+  enabled: false
+  ingressClassName: alb
+  hosts:
+    - prod-mimir.custellax.com
+
+serviceAccount:
+  create: true
+  name: mimir-storage
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::209479278227:role/eks-prod-custella-monitoring-storage
+
+mimir:
+  structuredConfig:
+    limits:
+      compactor_blocks_retention_period: 30d
+    blocks_storage:
+      backend: s3
+      s3:
+        bucket_name: 209479278227-apnortheast2-mimir-storage
+        endpoint: s3.ap-northeast-2.amazonaws.com
+        insecure: true
+      tsdb:
+        dir: /data/tsdb
+        head_compaction_interval: 15m
+        wal_replay_concurrency: 3
+
+runtimeConfig:
+  overrides:
+    dev-custella:
+      max_global_series_per_user: 1500000
+      ingestion_burst_size: 1000000
+      ingestion_rate: 100000
+
+metaMonitoring:
+  serviceMonitor:
+    enabled: false
+    labels:
+      release: prometheus-stack
+
+store_gateway:
+  zoneAwareReplication:
+    enabled: false
+ingester:
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+  zoneAwareReplication:
+    enabled: false

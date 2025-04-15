@@ -1,0 +1,28 @@
+{{- if eq .Values.mode "prod" }}
+apiVersion: karpenter.k8s.aws/v1beta1
+kind: EC2NodeClass
+metadata:
+  name: service
+spec:
+  amiFamily: AL2023
+  role: "eks-prod-custella-karpenter-node"
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "prod-custella" # replace with your cluster name
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "prod-custella" # replace with your cluster name
+  tags:
+    Name: "karpenter-node"
+    aws-node-termination-handler/managed: "true"
+  # EBS Option
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 30Gi
+        volumeType: gp3
+        iops: 3000
+        throughput: 125
+        encrypted: true
+        deleteOnTermination: true
+{{- end }}

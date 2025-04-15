@@ -1,0 +1,282 @@
+mode: dev
+
+externalSecret:
+  name: external-secret
+  dataKey: dev/infra
+  serviceAccount:
+    create: true
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::637423218787:role/eks-dev-custella-external-secrets
+      "helm.sh/hook": post-upgrade
+      "helm.sh/hook-weight": "0"
+
+controller:
+  replicas: 1
+
+global:
+  domain: dev-argocd.custellax.com
+
+#dex:
+#  certificateSecret:
+#    enabled: true
+
+configs:
+  params:
+    server.insecure: true
+  cm:
+    admin.enabled: false
+    url: https://dev-argocd.custellax.com
+    timeout.reconciliation: 30s
+    oidc.config: |
+      name: Keycloak
+      issuer: https://dev-keycloak.custellax.com/realms/blockbit
+      clientID: argocd
+      clientSecret: $external-secret:clientSecret
+      requestedScopes: ["openid", "profile", "email", "groups"]
+      logoutURL: https://dev-keycloak.custellax.com/realms/blockbit/protocol/openid-connect/logout?id_token_hint={{token}}&post_logout_redirect_uri=https://dev-argocd.custellax.com
+  rbac:
+    policy.csv: |
+      g, devops, role:admin
+      g, developer, role:readonly
+server:
+  ingress:
+    enabled: true
+    controller: aws
+    ingressClassName: alb
+    annotations:
+      alb.ingress.kubernetes.io/group.name: dev-custella
+      alb.ingress.kubernetes.io/healthcheck-path: /
+      alb.ingress.kubernetes.io/load-balancer-name: dev-custella
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:637423218787:certificate/2ca46e1b-f2d7-434a-8537-10189c2b380c
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
+      alb.ingress.kubernetes.io/subnets: subnet-0cfb882d43d052e3d, subnet-06bcf10b968dd617a
+    aws:
+      serviceType: ClusterIP
+      backendProtocolVersion: GRPC
+
+applicationSet:
+  repoURL: https://github.com/devblockbit/xHelm.git
+  project: x1
+  targetRevision: main
+  valueFiles:
+    - dev-values.yaml
+  cluster: https://kubernetes.default.svc
+  syncPolicy:
+    prune: true
+    selfHeal: true
+  annotations:
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: 923---bot---custella-dev-deploy
+    notifications.argoproj.io/subscribe.on-sync-failed.slack: 923---bot---custella-dev-deploy
+    notifications.argoproj.io/subscribe.on-sync-running.slack: 923---bot---custella-dev-deploy
+    notifications.argoproj.io/subscribe.on-sync-status-unknown.slack: 923---bot---custella-dev-deploy
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: 923---bot---custella-dev-deploy
+
+notifications:
+  triggers:
+    trigger.on-health-degraded: |
+      - description: Application has degraded
+        send:
+        - app-health-degraded
+        when: app.status.health.status == 'Degraded'
+    trigger.on-sync-failed: |
+      - description: Application syncing has failed
+        send:
+        - app-sync-failed
+        when: app.status.operationState.phase in ['Error', 'Failed']
+    trigger.on-sync-running: |
+      - description: Application is being synced
+        send:
+        - app-sync-running
+        when: app.status.operationState.phase in ['Running']
+    trigger.on-sync-status-unknown: |
+      - description: Application status is 'Unknown'
+        send:
+        - app-sync-status-unknown
+        when: app.status.sync.status == 'Unknown'
+    trigger.on-sync-succeeded: |
+      - description: Application syncing has succeeded
+        send:
+        - app-sync-succeeded
+        when: app.status.operationState.phase in ['Succeeded']
+  notifiers:
+    service.slack: |
+      token: $slack-token
+
+  templates:
+    template.app-health-degraded: |
+      message: |
+        {{if eq .serviceType "slack"}}:exclamation:{{end}}  Application {{.app.metadata.name}} has degraded. :warning:
+        Application details: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}.
+      slack:
+        attachments: |-
+          [{
+            "title": "{{ .app.metadata.name}}",
+            "title_link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+            "color": "#f4c030",
+            "fields": [
+            {
+              "title": "Sync Status",
+              "value": "{{.app.status.sync.status}}",
+              "short": true
+            },
+            {
+              "title": "Repository",
+              "value": "{{.app.spec.source.repoURL}}",
+              "short": true
+            }
+            {{range $index, $c := .app.status.conditions}}
+            {{if not $index}},{{end}}
+            {{if $index}},{{end}}
+            {
+              "title": "{{$c.type}}",
+              "value": "{{$c.message}}",
+              "short": true
+            }
+            {{end}}
+            ]
+          }]
+    template.app-sync-failed: |
+      message: |
+        {{if eq .serviceType "slack"}}:exclamation:{{end}}  The sync operation of application {{.app.metadata.name}} has failed at {{ (call .time.Parse .app.status.operationState.finishedAt).Local.Format "2006-01-02T15:04:05Z07:00" }} with the following error: {{.app.status.operationState.message}} :x:
+        Sync operation details are available at: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true
+      slack:
+        attachments: |-
+          [{
+            "title": "{{ .app.metadata.name}}",
+            "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+            "color": "#E96D76",
+            "fields": [
+            {
+              "title": "Sync Status",
+              "value": "{{.app.status.sync.status}}",
+              "short": true
+            },
+            {
+              "title": "Repository",
+              "value": "{{.app.spec.source.repoURL}}",
+              "short": true
+            }
+            {{range $index, $c := .app.status.conditions}}
+            {{if not $index}},{{end}}
+            {{if $index}},{{end}}
+            {
+              "title": "{{$c.type}}",
+              "value": "{{$c.message}}",
+              "short": true
+            }
+            {{end}}
+            ]
+          }]
+    template.app-sync-running: |
+      message: |
+        🚀  The sync operation of application {{.app.metadata.name}} has started at {{ (call .time.Parse .app.status.operationState.startedAt).Local.Format "2006-01-02T15:04:05Z07:00" }}
+        Sync operation details are available at: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true
+      slack:
+        attachments: |-
+          [{
+            "title": "{{ .app.metadata.name}}",
+            "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+            "color": "#0DADEA",
+            "fields": [
+            {
+              "title": "Sync Status",
+              "value": "{{.app.status.sync.status}}",
+              "short": true
+            },
+            {
+              "title": "Repository",
+              "value": "{{.app.spec.source.repoURL}}",
+              "short": true
+            }
+            {{range $index, $c := .app.status.conditions}}
+            {{if not $index}},{{end}}
+            {{if $index}},{{end}}
+            {
+              "title": "{{$c.type}}",
+              "value": "{{$c.message}}",
+              "short": true
+            }
+            {{end}}
+            ]
+          }]
+    template.app-sync-status-unknown: |
+      message: |
+        {{if eq .serviceType "slack"}}:exclamation:{{end}}  Application {{.app.metadata.name}} sync is 'Unknown'. :grey_question:
+        Application details: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}
+        {{if ne .serviceType "slack"}}
+        {{range $c := .app.status.conditions}}
+            * {{$c.message}}
+        {{end}}
+        {{end}}
+      slack:
+        attachments: |-
+          [{
+            "title": "{{ .app.metadata.name}}",
+            "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+            "color": "#E96D76",
+            "fields": [
+            {
+              "title": "Sync Status",
+              "value": "{{.app.status.sync.status}}",
+              "short": true
+            },
+            {
+              "title": "Repository",
+              "value": "{{.app.spec.source.repoURL}}",
+              "short": true
+            }
+            {{range $index, $c := .app.status.conditions}}
+            {{if not $index}},{{end}}
+            {{if $index}},{{end}}
+            {
+              "title": "{{$c.type}}",
+              "value": "{{$c.message}}",
+              "short": true
+            }
+            {{end}}
+            ]
+          }]
+    template.app-sync-succeeded: |
+      message: |
+        {{if eq .serviceType "slack"}}:white_check_mark:{{end}}  Application {{.app.metadata.name}} has been successfully synced at {{ (call .time.Parse .app.status.operationState.finishedAt).Local.Format "2006-01-02T15:04:05Z07:00" }} :tada:
+        Sync operation details are available at: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}?operation=true
+      slack:
+        attachments: |-
+          [{
+            "title": "{{ .app.metadata.name}}",
+            "title_link":"{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+            "color": "#18be52",
+            "fields": [
+            {
+              "title": "Sync Status",
+              "value": "{{.app.status.sync.status}}",
+              "short": true
+            },
+            {
+              "title": "Repository",
+              "value": "{{.app.spec.source.repoURL}}",
+              "short": true
+            }
+            {{range $index, $c := .app.status.conditions}}
+            {{if not $index}},{{end}}
+            {{if $index}},{{end}}
+            {
+              "title": "{{$c.type}}",
+              "value": "{{$c.message}}",
+              "short": true
+            }
+            {{end}}
+            ]
+          }]
+
+# group settings
+#      p, role:org-admin, applications, *, */*, allow
+#      p, role:org-admin, clusters, get, *, allow
+#      p, role:org-admin, repositories, *, *, allow
+#      p, role:org-admin, projects, *, *, allow
+#      p, role:org-admin, logs, *, *, allow
+#      p, role:org-admin, exec, *, */*, allow
+#      g, devblockbit:devops, role:org-admin

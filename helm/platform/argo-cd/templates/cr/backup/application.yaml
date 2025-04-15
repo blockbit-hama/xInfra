@@ -1,0 +1,27 @@
+{{/*apiVersion: argoproj.io/v1alpha1*/}}
+{{/*kind: Application*/}}
+{{/*metadata:*/}}
+{{/*  name: {{ .Values.application.xAuth.name }}*/}}
+{{/*  namespace: {{ include  "argo-cd.namespace" . }}*/}}
+{{/*  annotations:*/}}
+{{/*    {{- range $key, $value := .Values.application.xAuth.annotations }}*/}}
+{{/*    {{ $key }}: {{ $value | quote }}*/}}
+{{/*    {{- end }}*/}}
+{{/*spec:*/}}
+{{/*  destination:*/}}
+{{/*    namespace: {{ .Values.application.xAuth.destinationNamespace }}*/}}
+{{/*    server: {{ .Values.application.xAuth.cluster }}*/}}
+{{/*  project: {{ .Values.application.xAuth.project }}*/}}
+{{/*  source:*/}}
+{{/*    repoURL: {{ .Values.application.xAuth.repoURL }}*/}}
+{{/*    targetRevision: {{ .Values.application.xAuth.targetRevision }}*/}}
+{{/*    path: {{ .Values.application.xAuth.path }}*/}}
+{{/*    helm:*/}}
+{{/*      valueFiles:*/}}
+{{/*        {{- range .Values.application.xAuth.valueFiles }}*/}}
+{{/*        - {{ . | quote }}*/}}
+{{/*        {{- end }}*/}}
+{{/*  syncPolicy:*/}}
+{{/*    automated:*/}}
+{{/*      prune: {{ .Values.application.xAuth.syncPolicy.prune }}*/}}
+{{/*      selfHeal: {{ .Values.application.xAuth.syncPolicy.selfHeal }}*/}}

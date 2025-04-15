@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xfds
+spec:
+  template:
+    spec:
+      containers:
+        - name: xfds
+          volumeMounts:
+            - name: postgres-credentials-volume
+              mountPath: secrets/postgres
+            - name: keycloak-issuer-resourceserver-secret-volume
+              mountPath: secrets/keycloak
+      volumes:
+        - name: postgres-credentials-volume
+          secret:
+            secretName: x1-postgres-catalog-credentials
+        - name: keycloak-issuer-resourceserver-secret-volume
+          secret:
+            secretName: keycloak-issuer-resourceserver-secret

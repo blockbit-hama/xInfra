@@ -1,0 +1,20 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: kiali-virtual-service
+  namespace: istio-system
+spec:
+  hosts:
+    - dev-kiali.custellax.com
+  gateways:
+    - platform-gateway
+  http:
+    - name: kiali-route
+      match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: kiali.istio-system.svc.cluster.local
+            port:
+              number: 20001

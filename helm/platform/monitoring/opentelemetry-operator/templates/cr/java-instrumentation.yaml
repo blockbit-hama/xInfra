@@ -1,0 +1,26 @@
+{{/*apiVersion: opentelemetry.io/v1alpha1*/}}
+{{/*kind: Instrumentation*/}}
+{{/*metadata:*/}}
+{{/*  name: java-instrumentation*/}}
+{{/*  namespace: {{ .Release.Namespace }}*/}}
+{{/*  annotations:*/}}
+{{/*    "helm.sh/hook": post-upgrade*/}}
+{{/*  labels:*/}}
+{{/*    {{- include "opentelemetry-operator.labels" . | nindent 4 }}*/}}
+{{/*spec:*/}}
+{{/*  exporter:*/}}
+{{/*    endpoint: http://opentelemetry-collector.monitoring.svc.cluster.local:4318*/}}
+{{/*  propagators:*/}}
+{{/*    - tracecontext*/}}
+{{/*    - baggage*/}}
+{{/*  sampler:*/}}
+{{/*    type: parentbased_traceidratio*/}}
+{{/*    argument: "1"*/}}
+{{/*  java:*/}}
+{{/*    env:*/}}
+{{/*      - name: OTEL_EXPORTER_OTLP_PROTOCOL*/}}
+{{/*        value: http/protobuf*/}}
+{{/*      - name: EXPORTER_OTLP_TRACES_PROTOCOL*/}}
+{{/*        value: http/protobuf*/}}
+{{/*      - name: OTEL_METRICS_EXPORTER*/}}
+{{/*        value: none*/}}

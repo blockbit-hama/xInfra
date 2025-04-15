@@ -1,0 +1,101 @@
+mode: prod
+
+appName: alt-shift-front
+namespace: x1
+replicaCount: 2
+revisionHistoryLimit: 5
+image:
+  repository: 637423218787.dkr.ecr.ap-northeast-2.amazonaws.com/alt-shift-front
+  tag: f87a5f465ab7
+  pullPolicy: IfNotPresent
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+pdb:
+  enabled: true
+  minAvailable: 1
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: "app"
+              operator: In
+              values:
+                - alt-shift-front
+        topologyKey: "kubernetes.io/hostname"
+lifecycle:
+  preStop:
+    exec:
+      command: ["/bin/sh", "-c", "sleep 5"]
+livenessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 15
+readinessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 15
+terminationGracePeriodSeconds: 15
+#externalSecret:
+#  secretStore:
+#    name: alt-shift-front-secret-store
+#  secretName: alt-shift-front-secret
+#  dataKey: dev/alt-shift-front
+#  serviceAccount:
+#    name: alt-shift-front
+#    create: true
+#    annotations:
+#      eks.amazonaws.com/role-arn: arn:aws:iam::637423218787:role/eks-dev-custella-external-secrets
+
+ingress:
+  enabled: true
+  ingressClassName: alb
+  annotations:
+    alb.ingress.kubernetes.io/group.name: prod-custella
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/load-balancer-name: prod-custella
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:209479278227:certificate/24e0094f-d0d6-4c34-a951-daac28b02696
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/subnets: subnet-06c6613270b6bffbc, subnet-06ec5f0c6194522b5
+  ingressRule:
+    - host: prod-alt.custellax.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: alt-shift-front
+                port:
+                  number: 3000
+resources:
+  limits:
+    cpu: 100m
+    memory: 300Mi
+  requests:
+    cpu: 100m
+    memory: 300Mi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 300
+      podsValue: 1 # Increase by 1 pods when scaling up
+      periodSeconds: 15 # Evaluate over a 60-second period
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      podsValue: 1 # Decrease by 1 pod when scaling down
+      periodSeconds: 15 # Evaluate over a 60-second period

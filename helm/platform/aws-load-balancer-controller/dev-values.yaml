@@ -1,0 +1,9 @@
+clusterName: dev-custella
+
+serviceAccount:
+  create: true
+  name: aws-load-balancer-controller
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::637423218787:role/eks-dev-custella-alb-controller
+
+vpcId: vpc-02b712402be2d4d76

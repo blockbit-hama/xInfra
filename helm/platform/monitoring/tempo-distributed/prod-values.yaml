@@ -1,0 +1,43 @@
+minio:
+  enabled: false
+
+serviceAccount:
+  create: true
+  name: tempo-storage
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::209479278227:role/eks-prod-custella-monitoring-storage
+
+traces:
+  otlp:
+    grpc:
+      enabled: true
+    http:
+      enabled: true
+  zipkin:
+    enabled: false
+  jaeger:
+    thriftHttp:
+      enabled: false
+  opencensus:
+    enabled: false
+
+storage:
+  trace:
+    backend: s3
+    s3:
+      bucket: 209479278227-apnortheast2-tempo-storage
+      endpoint: s3.ap-northeast-2.amazonaws.com
+      insecure: true
+
+metaMonitoring:
+  serviceMonitor:
+    enabled: true
+  grafanaAgent:
+    enabled: false
+
+ingester:
+  persistence:
+    enabled: true
+    size: 10Gi
+  zoneAwareReplication:
+    enabled: false

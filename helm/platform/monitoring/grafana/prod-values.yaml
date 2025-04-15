@@ -1,0 +1,181 @@
+mode: prod
+
+useStatefulSet: true
+persistence:
+  type: pvc
+  enabled: true
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  storageClassName: ebs-sc
+
+externalSecret:
+  name: grafana-external-secret
+  dataKey: prod/infra
+  serviceAccount:
+    name: grafana-external-secrets
+    create: true
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::209479278227:role/eks-prod-custella-external-secrets
+  secretStore:
+    name: grafana-secret-store
+  secretName: grafana-secret
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: loki
+        type: loki
+        url: http://loki-gateway
+        access: proxy
+        jsonData:
+          derivedFields:
+            - name: TraceID
+              matcherRegex: "(?:traceId)=(\\w+)"
+              url: "$${__value.raw}"
+              datasourceUid: tempo
+              urlDisplayLabel: "Tempo TraceID"
+      - name: mimir
+        type: prometheus
+        url: http://mimir-nginx/prometheus
+        access: proxy
+        isDefault: true
+        jsonData:
+          httpHeaderName1: X-Scope-OrgID
+        secureJsonData:
+          httpHeaderValue1: prod-custella
+      - name: tempo
+        type: tempo
+        url: http://tempo-query-frontend:3100
+        access: proxy
+#    deleteDatasources:
+#      - name: prometheus
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+dashboards:
+  default:
+    logs:
+      file: dashboards/logs.json
+      datasource: Loki
+    custella:
+      file: dashboards/custella.json
+      datasource: Prometheus
+    jvm-xauth:
+      file: dashboards/jvm-xauth.json
+      datasource: Prometheus
+#    istio-control-plane-dashboard:
+#      gnetId: 7645
+#      revision: 229
+#      datasource: Prometheus
+#    istio-mesh-dashboard:
+#      gnetId: 7639
+#      revision: 229
+#      datasource: Prometheus
+#    istio-performance-dashboard:
+#      gnetId: 11829
+#      revision: 229
+#      datasource: Prometheus
+#    istio-service-dashboard:
+#      gnetId: 7636
+#      revision: 229
+#      datasource: Prometheus
+#    istio-wasm-extension-dashboard:
+#      gnetId: 13277
+#      revision: 186
+#      datasource: Prometheus
+#    istio-workload-dashboard:
+#      gnetId: 7630
+#      revision: 229
+#      datasource: Prometheus
+
+envFromSecret: grafana-external-secret
+grafana.ini:
+  server:
+    root_url: https://prod-monitoring.custellax.com/
+  auth:
+    disable_login_form: true
+    oauth_allow_insecure_email_lookup: true
+  security:
+    disable_initial_admin_creation: true
+  auth.generic_oauth:
+    enabled: true
+    allow_sign_up: true
+    skip_org_role_sync: false
+    name: Keycloak
+    client_id: $__env{client_id}
+    client_secret: $__env{client_secret}
+    scopes: openid email profile offline_access roles groups
+    email_attribute_path: email
+    login_attribute_path: preferred_username
+    name_attribute_path: name
+    auth_url: https://prod-keycloak.custellax.com/realms/blockbit/protocol/openid-connect/auth
+    token_url: https://prod-keycloak.custellax.com/realms/blockbit/protocol/openid-connect/token
+    api_url: https://prod-keycloak.custellax.com/realms/blockbit/protocol/openid-connect/userinfo
+    signout_redirect_url: https://prod-keycloak.custellax.com/realms/blockbit/protocol/openid-connect/logout?post_logout_redirect_uri=https%3A%2F%2Fprod-monitoring.custellax.com%2Flogin&client_id=grafana
+    allow_assign_grafana_admin: false
+    role_attribute_path: >-
+      contains(groups[*], 'devops') && 'Admin' ||
+      contains(groups[*], 'developer') && 'Viewer'
+#  auth.github:
+#    enabled: true
+#    allow_sign_up: true
+#    auto_login: false
+#    client_id: $__env{client_id}
+#    client_secret: $__env{client_secret}
+#    scopes: user:email,read:org
+#    auth_url: https://github.com/login/oauth/authorize
+#    token_url: https://github.com/login/oauth/access_token
+#    api_url: https://api.github.com/user
+#    allow_assign_grafana_admin: false
+#    skip_org_role_sync: false
+#    allowed_organizations:
+#    - devblockbit
+#    role_attribute_path: >-
+#      contains(groups[*], '@devblockbit/devops') && 'Admin' ||
+#      contains(groups[*], '@devblockbit/TeamX') && 'Viewer' || 'Viewer'
+
+ingress:
+  enabled: true
+  ingressClassName: alb
+  annotations:
+    alb.ingress.kubernetes.io/group.name: prod-custella
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/load-balancer-name: prod-custella
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:209479278227:certificate/24e0094f-d0d6-4c34-a951-daac28b02696
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/subnets: subnet-06c6613270b6bffbc, subnet-06ec5f0c6194522b5
+  hosts:
+    - prod-monitoring.custellax.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1024Mi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+# init container
+initChownData:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

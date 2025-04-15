@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nslookup-test
+  namespace: x1
+  labels:
+    app: nslookup-test
+spec:
+  containers:
+    - name: busybox
+      image: busybox:latest
+      command: ["sh", "-c", "sleep 3600"]
+      # Sleep for an hour to keep the Pod running
+  restartPolicy: Never

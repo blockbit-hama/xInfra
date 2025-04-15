@@ -1,0 +1,43 @@
+deploymentMode: SingleBinary
+
+serviceAccount:
+  create: true
+  name: loki-storage
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::637423218787:role/eks-dev-custella-monitoring-storage
+
+chunksCache:
+  enabled: false
+
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  schemaConfig:
+    configs:
+      - from: 2024-08-12
+        store: tsdb
+        object_store: s3
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  storage:
+    type: "s3"
+    bucketNames:
+      chunks: 637423218787-apnortheast2-loki-storage
+      ruler: 637423218787-apnortheast2-loki-storage
+      admin: 637423218787-apnortheast2-loki-storage
+    s3:
+      region: ap-northeast-2
+
+singleBinary:
+  replicas: 1
+read:
+  replicas: 0
+backend:
+  replicas: 0
+write:
+  replicas: 0
+
+

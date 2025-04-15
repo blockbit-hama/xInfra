@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: x1-bo-ui
+  labels:
+    app: x1-bo-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: x1-bo-ui
+  template:
+    metadata:
+      labels:
+        app: x1-bo-ui
+    spec:
+      containers:
+        - name: x1-bo-ui
+          image: ghcr.io/polarbookshop/x1-bo-ui:v1
+          imagePullPolicy: Always
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "sh", "-c", "sleep 5" ]
+          ports:
+            - containerPort: 9004
+          env:
+            - name: PORT
+              value: "9004"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: x1-bo-ui
+  labels:
+    app: x1-bo-ui
+spec:
+  type: ClusterIP
+  selector:
+    app: x1-bo-ui
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9004

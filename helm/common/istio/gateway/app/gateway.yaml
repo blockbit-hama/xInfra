@@ -1,0 +1,22 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: x1-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - name: x1
+      port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - dev-api.custellax.com
+        - dev-xbo.custellax.com
+        - dev-alt.custellax.com
+#      tls:
+#        mode: SIMPLE # enables HTTPS on this port
+#        serverCertificate: /etc/certs/servercert.pem
+#        privateKey: /etc/certs/privatekey.pem

@@ -1,0 +1,2 @@
+# xDeploy
+for minikube deployment

@@ -1,0 +1,32 @@
+service:
+  # Type of service. Set to "None" to disable the service entirely
+  # ALB: NodePort, CLB(default), NLB: LoadBalancer
+  type: ClusterIP
+#  type: NodePort
+#  ports:
+#    - name: status-port
+#      port: 15021
+#      protocol: TCP
+#      targetPort: 15021
+#    - name: http2
+#      port: 80
+#      protocol: TCP
+#      targetPort: 80
+#    - name: https
+#      port: 443
+#      protocol: TCP
+#      targetPort: 443
+  annotations: {}
+    # NLB를 사용하는 경우 아래 annotation 사용
+    # service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+    # service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    # service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+  # service.beta.kubernetes.io/aws-load-balancer-type: external
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
+  externalTrafficPolicy: ""
+  externalIPs: []
+  ipFamilyPolicy: ""
+  ipFamilies: []
+  ## Whether to automatically allocate NodePorts (only for LoadBalancers).
+  # allocateLoadBalancerNodePorts: false

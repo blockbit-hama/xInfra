@@ -1,0 +1,79 @@
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::637423218787:role/eks-dev-custella-aws-node-termination-handler
+
+enableSqsTerminationDraining: true
+
+queueURL: https://sqs.ap-northeast-2.amazonaws.com/637423218787/dev-custella-aws-node-termination-handler-queue
+
+#affinity:
+#  nodeAffinity:
+#    requiredDuringSchedulingIgnoredDuringExecution:
+#      nodeSelectorTerms:
+#        - matchExpressions:
+#            - key: karpenter.sh/nodepool
+#              operator: DoesNotExist
+#            - key: eks.amazonaws.com/nodegroup
+#              operator: In
+#              values:
+#                - dev-custella-ng
+
+externalSecret:
+  secretStore:
+    name: aws-node-termination-handler-store
+  secretName: aws-node-termination-handler
+  dataKey: dev/infra
+  serviceAccount:
+    name: aws-node-termination-handler-external-secrets
+    create: true
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::637423218787:role/eks-dev-custella-external-secrets
+
+webhookURLSecretName: aws-node-termination-handler
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 40Mi
+  limits:
+    cpu: 100m
+    memory: 100Mi
+
+rbac:
+  create: true
+  pspEnabled: false
+
+managedTag: "aws-node-termination-handler/managed"
+
+checkTagBeforeDraining: true
+
+webhookTemplate: >
+  {
+    {{- if eq .Kind "SPOT_ITN" -}}
+    "text": ":rotating_light: *EC2 스팟 인스턴스 중단 경고* :rotating_light:\n
+    *이벤트 ID :* `{{ .EventID }}`\n
+    *인스턴스 ID :* `{{ .InstanceID }}`\n
+    *노드 이름 :* `{{ .NodeName }}`\n
+    *시작 시간 :* `{{ .StartTime }}`\n
+    *영향받은 포드 :* `{{ .Pods }}`\n
+    *설명 :* {{ .Description }}\n"
+  
+    {{- else if eq .Kind "REBALANCE_RECOMMENDATION" -}}
+    "text": ":warning: *EC2 인스턴스 재조정 권고* :warning:\n
+    *이벤트 ID :* `{{ .EventID }}`\n
+    *인스턴스 ID :* `{{ .InstanceID }}`\n
+    *노드 이름 :* `{{ .NodeName }}`\n
+    *이벤트 시간 :* `{{ .StartTime }}`\n
+    *영향받은 포드 :* `{{ .Pods }}`\n
+    *설명 :* {{ .Description }}\n"
+  
+    {{- else if eq .Kind "SCHEDULED_EVENT" -}}
+    "text": ":ballot_box_with_check: *예약된 이벤트 알림* :ballot_box_with_check:\n
+    *이벤트 ID :* `{{ .EventID }}`\n
+    *인스턴스 ID :* `{{ .InstanceID }}`\n
+    *노드 이름 :* `{{ .NodeName }}`\n
+    *이벤트 시간 :* `{{ .StartTime }}`\n
+    *영향받은 포드 :* `{{ .Pods }}`\n
+    *설명 :* {{ .Description }}\n"
+    {{- end }}
+  }

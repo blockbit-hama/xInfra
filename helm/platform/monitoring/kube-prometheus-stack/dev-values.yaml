@@ -1,0 +1,79 @@
+alertmanager:
+  enabled: false
+
+prometheus:
+  service:
+    port: 9090
+    targetPort: 9090
+    type: ClusterIP
+  ingress:
+    enabled: true
+    annotations:
+      alb.ingress.kubernetes.io/group.name: dev-custella
+      alb.ingress.kubernetes.io/healthcheck-path: /
+      alb.ingress.kubernetes.io/load-balancer-name: dev-custella
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:637423218787:certificate/2ca46e1b-f2d7-434a-8537-10189c2b380c
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
+      alb.ingress.kubernetes.io/subnets: subnet-0cfb882d43d052e3d, subnet-06bcf10b968dd617a
+    hosts:
+      - dev-prometheus.custellax.com
+    paths:
+      - /
+    pathType: Prefix
+    ingressClassName: alb
+    servicePort: 9090
+  prometheusSpec:
+    remoteWrite:
+      - headers:
+          X-Scope-OrgID: dev-custella
+        url: http://mimir-nginx/api/v1/push
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1500Mi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+
+prometheusOperator:
+  enabled: true
+
+kube-state-metrics:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 64Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
+
+prometheus-node-exporter:
+  enabled: true
+  resources:
+    limits:
+      cpu: 200m
+      memory: 50Mi
+    requests:
+      cpu: 100m
+      memory: 30Mi
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: eks.amazonaws.com/compute-type
+                operator: NotIn
+                values:
+                  - fargate
+
+defaultRules:
+  create: true
+  rules:
+    general: false
+  disabled:
+    PrometheusRuleFailures: true
+    CPUThrottlingHigh: true

@@ -1,0 +1,45 @@
+mode: prod
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::209479278227:role/eks-prod-custella-karpenter-controller
+
+controller:
+  resources:
+    limits:
+      memory: 1Gi
+    request:
+      cpu: 100m
+      memory: 1Gi
+
+additionalAnnotations:
+  app: karpenter
+
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: karpenter.sh/nodepool
+              operator: DoesNotExist
+            - key: eks.amazonaws.com/compute-type
+              operator: In
+              values:
+                - fargate
+#            - key: eks.amazonaws.com/nodegroup
+#              operator: In
+#              values:
+#                - dev-custella-ng
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - topologyKey: "kubernetes.io/hostname"
+
+settings:
+  clusterName: prod-custella
+  featureGates:
+    spotToSpotConsolidation: true
+
+serviceMonitor:
+  enabled: false
+  additionalLabels:
+    release: prometheus-stack

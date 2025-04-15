@@ -1,0 +1,98 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: api-virtual-service
+  namespace: istio-system
+spec:
+  hosts:
+    - dev-api.custellax.com
+  gateways:
+    - x1-gateway
+  http:
+    - name: xboa-route
+      match:
+        - uri:
+            prefix: /xboa
+      route:
+        - destination:
+            host: xboa.x1.svc.cluster.local
+            port:
+              number: 9001
+    - name: xbank-route
+      match:
+        - uri:
+            prefix: /xbank
+      route:
+        - destination:
+            host: xbank.x1.svc.cluster.local
+            port:
+              number: 8080
+    - name: xauth-route
+      match:
+        - uri:
+            prefix: /xauth
+      route:
+        - destination:
+            host: xauth.x1.svc.cluster.local
+            port:
+              number: 8080
+    - name: xfds-route
+      match:
+        - uri:
+            prefix: /xfds
+      route:
+        - destination:
+            host: xfds.x1.svc.cluster.local
+            port:
+              number: 9001
+    - name: xprobe-route
+      match:
+        - uri:
+            prefix: /xprobe
+      route:
+        - destination:
+            host: xprobe.x1.svc.cluster.local
+            port:
+              number: 9001
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: xbo-front-virtual-service
+  namespace: istio-system
+spec:
+  hosts:
+    - dev-xbo.custellax.com
+  gateways:
+    - x1-gateway
+  http:
+    - name: xbo-front-route
+      match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: xbo-front.x1.svc.cluster.local
+            port:
+              number: 3000
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: alt-shift-front-virtual-service
+  namespace: istio-system
+spec:
+  hosts:
+    - dev-alt.custellax.com
+  gateways:
+    - x1-gateway
+  http:
+    - name: alt-shift-front-route
+      match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: alt-shift-front.x1.svc.cluster.local
+            port:
+              number: 3000
